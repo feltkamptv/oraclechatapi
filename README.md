@@ -23,4 +23,4 @@ $client = new oracleSoapApi($soapUrl, $username, $password, $app_id, false, $int
 
 ## License
 
-This code is licensed under de GNU license.
+This code is licensed under the GNU license.
