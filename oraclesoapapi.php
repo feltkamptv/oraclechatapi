@@ -16,17 +16,17 @@
 class oracleSoapApi{
 
 	protected $wsdl = false;
-    protected $username = false;
-    protected $password = false;
-    protected $appId = false;
-    protected $sessionId = false;
-    protected $interfaceName = false;
-    protected $interfaceId = false;
-
-    public function __construct($wsdl, $username, $password, $appId, $sessionId, $interfaceId, $interfaceName){
-        $this->wsdl = $wsdl;
-        $this->username = $username;
-        $this->password = $password;
+	protected $username = false;
+	protected $password = false;
+	protected $appId = false;
+	protected $sessionId = false;
+	protected $interfaceName = false;
+	protected $interfaceId = false;
+	
+	public function __construct($wsdl, $username, $password, $appId, $sessionId, $interfaceId, $interfaceName){
+	$this->wsdl = $wsdl;
+	$this->username = $username;
+	$this->password = $password;
 		$this->appId = $appId;
 		$this->sessionId = $sessionId;
 		$this->interfaceId = $interfaceId;
@@ -35,7 +35,7 @@ class oracleSoapApi{
 		$this->clientTransactionID = 0;
 		$this->chatSessionToken = false;
 		$this->sitename = false;
-    }// end function
+	}// end function
 	
 	/** 
 	* SET WSDL
@@ -463,6 +463,15 @@ class oracleSoapApi{
 		}
 	}// end function
 	
+	/** 
+	* DECODE GZIP
+	*
+	* This function will decode a gzipped string, but only if it is gzipped.
+	*
+	* @param string $response
+	* 
+	* @return: string $response
+	**/
 	public function decodeGzip($response){
 		$is_gzip = 0 === mb_strpos($response, "\x1f" . "\x8b" . "\x08", 0, "US-ASCII");
 		if($is_gzip){
