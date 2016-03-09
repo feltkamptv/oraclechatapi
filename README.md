@@ -1,1 +1,26 @@
-# oraclechatapi
+## Oracle Chat API PHP class
+
+The Oracle Chat API PHP class is a simple class for making simple calls to the Oracle Chat SOAP API of Oracle Service Cloud with PHP.
+
+## Installation
+
+Download the oraclesoapapi.php file and include this in the PHP file where you would like to use the Oracle Chat API.
+
+## Usage
+
+```php
+include_once('oraclesoapapi.php');
+
+$soapUrl = 'https://your_service_cloud.rightnowdemo.com/cgi-bin/your_service_cloud.cfg/services/chat_soap';
+$username = 'YOUR_USERNAME';
+$password = 'YOUR_PASSWORD';
+$app_id = 'YOUR_APP_ID';
+$interface_name = 'your_service_cloud';
+$interface_id = 1;
+
+$client = new oracleSoapApi($soapUrl, $username, $password, $app_id, false, $interface_id, $interface_name);
+```
+
+## License
+
+This code is licensed under de GNU license.
