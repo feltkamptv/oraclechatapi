@@ -1,6 +1,7 @@
 <?php
 /**
  * @package: oracleSoapApi
+ * @link: https://github.com/feltkamptv/oraclechatapi/
  * @developer: Feltkamp.tv Multimedia Productions
  * @email: info@feltkamp.tv
  * @tel: +31 (0) 20 785 4487
@@ -32,6 +33,9 @@ class oracleSoapApi{
 		$this->interfaceId = $interfaceId;
 		$this->interfaceName = $interfaceName;
 		$this->error = false;
+		$this->error_curl = false;
+		$this->httpcode = false;
+		$this->retry = false;
 		$this->clientTransactionID = 0;
 		$this->chatSessionToken = false;
 		$this->sitename = false;
@@ -151,7 +155,25 @@ class oracleSoapApi{
 		$this->setChatSessionToken($chat_soap['chat_token']);
 		$request_chat = $this->call('RequestChat', $data);
 		if($this->error){
-			//echo $this->error; 
+			return false;
+		}else{
+			$request_chat = $this->parseResult('RequestChat', $request_chat);
+			return $request_chat['session_id'];
+		}
+	}// end function
+	
+	/** 
+	* REQUEST CHAT ONLY
+	*
+	* This function will only perform the RequestChat SOAP API call.
+	*
+	* @param string $phonenumber, array $data
+	*
+	* @return: string $session_id on success, false on failure
+	**/
+	public function requestChatOnly($phonenumber, $data){
+		$request_chat = $this->call('RequestChat', $data);
+		if($this->error){
 			return false;
 		}else{
 			$request_chat = $this->parseResult('RequestChat', $request_chat);
@@ -186,11 +208,32 @@ class oracleSoapApi{
 	*
 	* @param string $msg
 	*
-	* @return: true
+	* @return: boolean
 	**/
 	public function sendMsg($msg){
 		$post_message = $this->call('PostChatMessage', array('Body'=>$msg));
-		return true;
+		if(!$post_message){
+			return false;
+		}else{
+			return true;
+		}
+	}// end function
+	
+	/** 
+	* CHECK ACTIVE CHAT
+	*
+	* This function will check if a chat is still active and available.
+	*
+	* @return: boolean
+	**/
+	public function checkActiveChat(){
+		$post = array('Mode'=>'LISTENING');
+		$post_message = $this->call('SendActivityChange', $post);
+		if(!$post_message){
+			return false;
+		}else{
+			return true;
+		}
 	}// end function
 	
 	/** 
@@ -200,7 +243,7 @@ class oracleSoapApi{
 	*
 	* @param boolean $typing
 	*
-	* @return: true
+	* @return: boolean
 	**/
 	public function setTypingMessage($typing){
 		if($typing){
@@ -209,7 +252,11 @@ class oracleSoapApi{
 			$post = array('Mode'=>'LISTENING');
 		}
 		$post_message = $this->call('SendActivityChange', $post);
-		return true;
+		if(!$post_message){
+			return false;
+		}else{
+			return true;
+		}
 	}// end function
 	
 	/** 
@@ -293,6 +340,9 @@ class oracleSoapApi{
 				if(array_key_exists('LastName', $params['CustomerInformation'])){
             		$raw_xml .= '<v1:LastName>'.$params['CustomerInformation']['LastName'].'</v1:LastName>';
 				}
+				if(array_key_exists('ContactID', $params['CustomerInformation'])){
+            		$raw_xml .= '<v1:ContactID id="'.$params['CustomerInformation']['ContactID'].'"/>';
+				}
 				$raw_xml .= '<v1:InterfaceID><v1:ID id="'.$this->interfaceId.'"/><v1:Name>'.$this->interfaceName.'</v1:Name></v1:InterfaceID>';
          		$raw_xml .= '</v11:CustomerInformation>';
          		$raw_xml .= '<v11:ChatSessionToken>'.$this->chatSessionToken.'</v11:ChatSessionToken>';
@@ -320,7 +370,7 @@ class oracleSoapApi{
 			
 			case 'SendActivityChange':
 				$raw_xml .= '<v11:SendActivityChange>'.$this->getTransactionRequestData();
-         		$raw_xml .= '<v11:Mode>'.$params['Mode'].'</v11:Body></v11:SendActivityChange>';
+         		$raw_xml .= '<v11:Mode>'.$params['Mode'].'</v11:Mode></v11:SendActivityChange>';
 				break;
 				
 			case 'GetChatOperatingHours':
@@ -427,6 +477,7 @@ class oracleSoapApi{
 	**/
 	public function call($action, $params, $request = false){
 		$this->error = false;
+		$this->error_curl = false;
 		if(!$request){
 			$this->request = $this->getSoapRequest($action, $params);
 		}else{
@@ -447,17 +498,27 @@ class oracleSoapApi{
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 		curl_setopt($ch, CURLOPT_URL, $this->wsdl);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 20);
 		curl_setopt($ch, CURLOPT_POST, true);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $this->request);
 		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 		
 		$response = curl_exec($ch);
+		if(!$response){
+			$this->error_curl = curl_error($ch);
+		}
 		$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		curl_close($ch);
 		if($http_code == 200){
+			$this->retry = false;
 			return $this->decodeGzip($response);
+		}elseif(empty($http_code) && !$this->retry){
+			$this->retry = true;
+			sleep(500000);
+			return $this->call($action, $params, $request);
 		}else{
+			$this->retry = false;
+			$this->httpcode = $http_code;
 			$this->error = $this->decodeGzip($response);
 			return false;
 		}
@@ -481,4 +542,14 @@ class oracleSoapApi{
 		}
 	}// end function
 	
+	/** 
+	* GET ERROR
+	*
+	* This function will return the error output.
+	*
+	* @return: string
+	**/
+	public function getError(){
+		return $this->error;
+	}// end function
 }// end class
