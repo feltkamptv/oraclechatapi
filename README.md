@@ -21,6 +21,8 @@ $interface_id = 1;
 $client = new oracleSoapApi($soapUrl, $username, $password, $app_id, false, $interface_id, $interface_name);
 ```
 
+If you are communicating with the Oracle Service Cloud Chat API, make sure you have Curl compiled with OpenSSL and not with GnuTLS. GnuTLS tends to give errors because the Chat API does not properly close TLS connections.
+
 ## Need support?
 
 If you need support with Oracle Service Cloud or with this Chat API PHP class, contact [Customer Interaction Group](http://www.custintgroup.com) or [Feltkamp.tv](http://www.feltkamp.tv)
